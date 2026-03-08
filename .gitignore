@@ -1,0 +1,6 @@
+bin/picoly
+*.db
+*.db-wal
+*.db-shm
+*.lock
+picoly/
