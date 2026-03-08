@@ -86,7 +86,7 @@ func runWork(args []string) error {
 	ctx := context.Background()
 
 	if status != "" {
-		if _, err := app.Tickets.UpdateStatus(ctx, id, status, sinceAt); err != nil {
+		if _, err := app.Tickets.UpdateStatus(ctx, id, status, "", sinceAt); err != nil {
 			WriteError(err)
 			return err
 		}

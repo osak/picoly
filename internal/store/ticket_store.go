@@ -21,12 +21,12 @@ func NewTicketStore(d *db.DB) *TicketStore {
 }
 
 // Create inserts a new ticket and returns it with the assigned ID.
-func (s *TicketStore) Create(ctx context.Context, title, description, createdBy string) (*model.Ticket, error) {
+func (s *TicketStore) Create(ctx context.Context, title, description, createdBy, assignee string) (*model.Ticket, error) {
 	now := time.Now().UTC()
 	nowStr := now.Format(time.RFC3339Nano)
 	result, err := s.db.ExecContext(ctx,
-		`INSERT INTO tickets (title, description, status, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
-		title, description, string(model.StatusTodo), createdBy, nowStr, nowStr,
+		`INSERT INTO tickets (title, description, status, assignee, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		title, description, string(model.StatusTodo), assignee, createdBy, nowStr, nowStr,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("insert ticket: %w", err)
@@ -40,6 +40,7 @@ func (s *TicketStore) Create(ctx context.Context, title, description, createdBy 
 		Title:       title,
 		Description: description,
 		Status:      model.StatusTodo,
+		Assignee:    assignee,
 		CreatedBy:   createdBy,
 		CreatedAt:   now,
 		UpdatedAt:   now,
@@ -49,7 +50,7 @@ func (s *TicketStore) Create(ctx context.Context, title, description, createdBy 
 // GetByID retrieves a ticket by ID without its comments.
 func (s *TicketStore) GetByID(ctx context.Context, id int64) (*model.Ticket, error) {
 	row := s.db.QueryRowContext(ctx,
-		`SELECT id, title, description, status, created_by, created_at, updated_at FROM tickets WHERE id = ?`,
+		`SELECT id, title, description, status, assignee, created_by, created_at, updated_at FROM tickets WHERE id = ?`,
 		id,
 	)
 	return scanTicket(row)
@@ -97,24 +98,40 @@ func (s *TicketStore) Update(ctx context.Context, id int64, title, description s
 }
 
 // UpdateStatus changes the status of a ticket.
+// If assignee is non-empty, the assignee column is also updated.
 // If sinceAt is non-zero, it returns ErrRaceCondition when updated_at does not match.
-func (s *TicketStore) UpdateStatus(ctx context.Context, id int64, status model.Status, sinceAt time.Time) (*model.Ticket, error) {
+func (s *TicketStore) UpdateStatus(ctx context.Context, id int64, status model.Status, assignee string, sinceAt time.Time) (*model.Ticket, error) {
 	now := time.Now().UTC()
 	nowStr := now.Format(time.RFC3339Nano)
 
 	var result sql.Result
 	var err error
-	if sinceAt.IsZero() {
-		result, err = s.db.ExecContext(ctx,
-			`UPDATE tickets SET status = ?, updated_at = ? WHERE id = ?`,
-			string(status), nowStr, id,
-		)
+	if assignee != "" {
+		if sinceAt.IsZero() {
+			result, err = s.db.ExecContext(ctx,
+				`UPDATE tickets SET status = ?, assignee = ?, updated_at = ? WHERE id = ?`,
+				string(status), assignee, nowStr, id,
+			)
+		} else {
+			sinceAtStr := sinceAt.UTC().Format(time.RFC3339Nano)
+			result, err = s.db.ExecContext(ctx,
+				`UPDATE tickets SET status = ?, assignee = ?, updated_at = ? WHERE id = ? AND updated_at = ?`,
+				string(status), assignee, nowStr, id, sinceAtStr,
+			)
+		}
 	} else {
-		sinceAtStr := sinceAt.UTC().Format(time.RFC3339Nano)
-		result, err = s.db.ExecContext(ctx,
-			`UPDATE tickets SET status = ?, updated_at = ? WHERE id = ? AND updated_at = ?`,
-			string(status), nowStr, id, sinceAtStr,
-		)
+		if sinceAt.IsZero() {
+			result, err = s.db.ExecContext(ctx,
+				`UPDATE tickets SET status = ?, updated_at = ? WHERE id = ?`,
+				string(status), nowStr, id,
+			)
+		} else {
+			sinceAtStr := sinceAt.UTC().Format(time.RFC3339Nano)
+			result, err = s.db.ExecContext(ctx,
+				`UPDATE tickets SET status = ?, updated_at = ? WHERE id = ? AND updated_at = ?`,
+				string(status), nowStr, id, sinceAtStr,
+			)
+		}
 	}
 	if err != nil {
 		return nil, fmt.Errorf("update status: %w", err)
@@ -149,7 +166,7 @@ type ListOptions struct {
 // List returns tickets matching the given filter and sort options.
 func (s *TicketStore) List(ctx context.Context, opts ListOptions) ([]model.ListItem, error) {
 	query := `
-		SELECT t.id, t.title, t.status, COUNT(c.id) as comment_count, t.updated_at
+		SELECT t.id, t.title, t.status, t.assignee, COUNT(c.id) as comment_count, t.updated_at
 		FROM tickets t
 		LEFT JOIN comments c ON c.ticket_id = t.id
 	`
@@ -184,7 +201,7 @@ func (s *TicketStore) List(ctx context.Context, opts ListOptions) ([]model.ListI
 	for rows.Next() {
 		var item model.ListItem
 		var updatedAtStr string
-		if err := rows.Scan(&item.ID, &item.Title, &item.Status, &item.CommentCount, &updatedAtStr); err != nil {
+		if err := rows.Scan(&item.ID, &item.Title, &item.Status, &item.Assignee, &item.CommentCount, &updatedAtStr); err != nil {
 			return nil, fmt.Errorf("scan list item: %w", err)
 		}
 		t, err := time.Parse(time.RFC3339Nano, updatedAtStr)
@@ -200,7 +217,7 @@ func (s *TicketStore) List(ctx context.Context, opts ListOptions) ([]model.ListI
 func scanTicket(row *sql.Row) (*model.Ticket, error) {
 	var t model.Ticket
 	var createdAtStr, updatedAtStr string
-	err := row.Scan(&t.ID, &t.Title, &t.Description, &t.Status, &t.CreatedBy, &createdAtStr, &updatedAtStr)
+	err := row.Scan(&t.ID, &t.Title, &t.Description, &t.Status, &t.Assignee, &t.CreatedBy, &createdAtStr, &updatedAtStr)
 	if err == sql.ErrNoRows {
 		return nil, model.ErrNotFound
 	}

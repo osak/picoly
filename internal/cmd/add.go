@@ -65,7 +65,7 @@ func runAdd(args []string) error {
 	defer l.Release()
 
 	ctx := context.Background()
-	ticket, err := app.Tickets.Create(ctx, input.Title, input.Description, cfg.UserID)
+	ticket, err := app.Tickets.Create(ctx, input.Title, input.Description, cfg.UserID, "")
 	if err != nil {
 		WriteError(err)
 		return err
