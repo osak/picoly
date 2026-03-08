@@ -9,17 +9,17 @@ import (
 	"github.com/osak/picoly/internal/model"
 )
 
-// UserStore はユーザーのCRUDを行う
+// UserStore handles CRUD operations for users.
 type UserStore struct {
 	db *db.DB
 }
 
-// NewUserStore はUserStoreを作成する
+// NewUserStore creates a new UserStore.
 func NewUserStore(d *db.DB) *UserStore {
 	return &UserStore{db: d}
 }
 
-// GetOrCreate はユーザーを取得、存在しなければworkerロールで作成する
+// GetOrCreate returns the user with the given ID, creating one with the worker role if it does not exist.
 func (s *UserStore) GetOrCreate(ctx context.Context, userID string) (*model.User, error) {
 	row := s.db.QueryRowContext(ctx,
 		`SELECT id, role FROM users WHERE id = ?`,
@@ -34,7 +34,7 @@ func (s *UserStore) GetOrCreate(ctx context.Context, userID string) (*model.User
 		return nil, fmt.Errorf("get user: %w", err)
 	}
 
-	// 存在しなければworkerで作成
+	// user not found; create with worker role
 	_, err = s.db.ExecContext(ctx,
 		`INSERT INTO users (id, role) VALUES (?, ?)`,
 		userID, string(model.RoleWorker),
@@ -45,7 +45,7 @@ func (s *UserStore) GetOrCreate(ctx context.Context, userID string) (*model.User
 	return &model.User{ID: userID, Role: model.RoleWorker}, nil
 }
 
-// EnsureGodUser はユーザーが存在しない場合のみgodロールで作成する
+// EnsureGodUser inserts the given user with the god role only if the user does not already exist.
 func (s *UserStore) EnsureGodUser(ctx context.Context, userID string) error {
 	_, err := s.db.ExecContext(ctx,
 		`INSERT OR IGNORE INTO users (id, role) VALUES (?, ?)`,

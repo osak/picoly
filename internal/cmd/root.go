@@ -12,14 +12,14 @@ import (
 	"github.com/osak/picoly/internal/store"
 )
 
-// Config はpicolyの設定を保持する
+// Config holds the runtime configuration for picoly.
 type Config struct {
 	DBPath    string
 	ExportDir string
 	UserID    string
 }
 
-// AppContext はコマンド実行に必要なコンテキストを保持する
+// AppContext holds all dependencies needed to execute a command.
 type AppContext struct {
 	Config   *Config
 	DB       *db.DB
@@ -30,7 +30,7 @@ type AppContext struct {
 	User     *model.User
 }
 
-// LoadConfig は環境変数から設定を読み込む
+// LoadConfig reads configuration from environment variables.
 func LoadConfig() (*Config, error) {
 	userID := os.Getenv("PICOLY_USER_ID")
 	if userID == "" {
@@ -51,7 +51,7 @@ func LoadConfig() (*Config, error) {
 	}, nil
 }
 
-// NewAppContext は設定からAppContextを構築する
+// NewAppContext initializes all dependencies from the given configuration.
 func NewAppContext(cfg *Config) (*AppContext, error) {
 	d, err := db.Open(cfg.DBPath)
 	if err != nil {
@@ -59,7 +59,7 @@ func NewAppContext(cfg *Config) (*AppContext, error) {
 	}
 
 	us := store.NewUserStore(d)
-	// 初回起動時にGodユーザーを登録
+	// Register the current user as god on first run.
 	if err := us.EnsureGodUser(context.Background(), cfg.UserID); err != nil {
 		d.Close()
 		return nil, fmt.Errorf("ensure god user: %w", err)
@@ -88,7 +88,7 @@ func NewAppContext(cfg *Config) (*AppContext, error) {
 	}, nil
 }
 
-// Run はサブコマンドをルーティングする
+// Run dispatches args to the appropriate subcommand handler.
 func Run(args []string) error {
 	if len(args) == 0 {
 		return printUsage()
@@ -123,7 +123,7 @@ Commands:
 	return fmt.Errorf("no command specified")
 }
 
-// requireAdmin はユーザーが管理者権限を持つことを確認する
+// requireAdmin returns ErrUnauthorized if the user does not have admin privileges.
 func requireAdmin(user *model.User) error {
 	if !auth.CanManageTickets(user) {
 		return model.ErrUnauthorized

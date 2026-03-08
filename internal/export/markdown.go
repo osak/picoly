@@ -23,20 +23,20 @@ var funcMap = template.FuncMap{
 	},
 }
 
-// boardData はboard.md.tmplに渡すデータ
+// boardData holds the template data for board.md.
 type boardData struct {
 	UpdatedAt time.Time
 	Tickets   []model.ListItem
 }
 
-// Exporter はMarkdownエクスポートを行う
+// Exporter writes ticket data to Markdown files using text/template.
 type Exporter struct {
 	outputDir string
 	board     *template.Template
 	ticket    *template.Template
 }
 
-// NewExporter はExporterを作成する
+// NewExporter creates a new Exporter that writes output to outputDir.
 func NewExporter(outputDir string) (*Exporter, error) {
 	board, err := template.New("board.md.tmpl").Funcs(funcMap).ParseFS(templateFS, "templates/board.md.tmpl")
 	if err != nil {
@@ -53,7 +53,7 @@ func NewExporter(outputDir string) (*Exporter, error) {
 	}, nil
 }
 
-// ExportBoard はボード全体のboard.mdを書き出す
+// ExportBoard writes the board overview to <outputDir>/board.md.
 func (e *Exporter) ExportBoard(tickets []model.ListItem) error {
 	if err := os.MkdirAll(e.outputDir, 0755); err != nil {
 		return fmt.Errorf("mkdir %s: %w", e.outputDir, err)
@@ -75,7 +75,7 @@ func (e *Exporter) ExportBoard(tickets []model.ListItem) error {
 	return nil
 }
 
-// ExportTicket は個別チケットのMarkdownを書き出す
+// ExportTicket writes a single ticket to <outputDir>/tickets/<id>.md.
 func (e *Exporter) ExportTicket(ticket *model.Ticket) error {
 	ticketDir := filepath.Join(e.outputDir, "tickets")
 	if err := os.MkdirAll(ticketDir, 0755); err != nil {
@@ -94,7 +94,7 @@ func (e *Exporter) ExportTicket(ticket *model.Ticket) error {
 	return nil
 }
 
-// ExportAll はボード全体と指定チケットのMarkdownを書き出す
+// ExportAll writes both the board overview and the given ticket's Markdown file.
 func (e *Exporter) ExportAll(tickets []model.ListItem, changed *model.Ticket) error {
 	if err := e.ExportBoard(tickets); err != nil {
 		return err

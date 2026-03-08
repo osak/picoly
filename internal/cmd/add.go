@@ -28,7 +28,7 @@ func runAdd(args []string) error {
 		return err
 	}
 
-	// JSON入力処理
+	// parse JSON input if provided
 	input := addInput{Title: *title, Description: *desc}
 	if *jsonStr != "" {
 		if err := json.Unmarshal([]byte(*jsonStr), &input); err != nil {
@@ -71,7 +71,7 @@ func runAdd(args []string) error {
 		return err
 	}
 
-	// Markdownエクスポート
+	// export Markdown files after mutation
 	allTickets, _ := app.Tickets.List(ctx, store.ListOptions{})
 	app.Exporter.ExportAll(allTickets, ticket)
 

@@ -7,14 +7,14 @@ import (
 	"time"
 )
 
-// FileLock はファイルベースのアドバイザリロック
+// FileLock is a file-based advisory lock using syscall.Flock.
 type FileLock struct {
 	file *os.File
 	path string
 }
 
-// Acquire はロックファイルを作成・取得する
-// timeout で指定した時間内に取得できなければエラーを返す
+// Acquire creates and obtains an exclusive lock on the file at dbPath+".lock".
+// It returns an error if the lock cannot be obtained within the given timeout.
 func Acquire(dbPath string, timeout time.Duration) (*FileLock, error) {
 	lockPath := dbPath + ".lock"
 	deadline := time.Now().Add(timeout)
@@ -41,7 +41,7 @@ func Acquire(dbPath string, timeout time.Duration) (*FileLock, error) {
 	}
 }
 
-// Release はロックを解放しファイルを閉じる
+// Release unlocks the file and closes it.
 func (l *FileLock) Release() error {
 	if err := syscall.Flock(int(l.file.Fd()), syscall.LOCK_UN); err != nil {
 		l.file.Close()

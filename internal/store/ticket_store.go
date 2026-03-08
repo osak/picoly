@@ -10,17 +10,17 @@ import (
 	"github.com/osak/picoly/internal/model"
 )
 
-// TicketStore はチケットのCRUDを行う
+// TicketStore handles CRUD operations for tickets.
 type TicketStore struct {
 	db *db.DB
 }
 
-// NewTicketStore はTicketStoreを作成する
+// NewTicketStore creates a new TicketStore.
 func NewTicketStore(d *db.DB) *TicketStore {
 	return &TicketStore{db: d}
 }
 
-// Create は新規チケットを作成し、発行されたIDを持つTicketを返す
+// Create inserts a new ticket and returns it with the assigned ID.
 func (s *TicketStore) Create(ctx context.Context, title, description, createdBy string) (*model.Ticket, error) {
 	now := time.Now().UTC()
 	nowStr := now.Format(time.RFC3339Nano)
@@ -46,7 +46,7 @@ func (s *TicketStore) Create(ctx context.Context, title, description, createdBy 
 	}, nil
 }
 
-// GetByID はチケット単体を取得する（コメントなし）
+// GetByID retrieves a ticket by ID without its comments.
 func (s *TicketStore) GetByID(ctx context.Context, id int64) (*model.Ticket, error) {
 	row := s.db.QueryRowContext(ctx,
 		`SELECT id, title, description, status, created_by, created_at, updated_at FROM tickets WHERE id = ?`,
@@ -55,7 +55,7 @@ func (s *TicketStore) GetByID(ctx context.Context, id int64) (*model.Ticket, err
 	return scanTicket(row)
 }
 
-// GetByIDWithComments はチケットとそのコメントをまとめて取得する
+// GetByIDWithComments retrieves a ticket together with all its comments.
 func (s *TicketStore) GetByIDWithComments(ctx context.Context, id int64) (*model.Ticket, error) {
 	ticket, err := s.GetByID(ctx, id)
 	if err != nil {
@@ -70,8 +70,8 @@ func (s *TicketStore) GetByIDWithComments(ctx context.Context, id int64) (*model
 	return ticket, nil
 }
 
-// Update はタイトル・説明を更新する
-// sinceAt が非ゼロの場合、updated_at が一致しなければ ErrRaceCondition を返す
+// Update modifies the title and description of a ticket.
+// If sinceAt is non-zero, it returns ErrRaceCondition when updated_at does not match.
 func (s *TicketStore) Update(ctx context.Context, id int64, title, description string, sinceAt time.Time) (*model.Ticket, error) {
 	now := time.Now().UTC()
 	nowStr := now.Format(time.RFC3339Nano)
@@ -96,8 +96,8 @@ func (s *TicketStore) Update(ctx context.Context, id int64, title, description s
 	return s.checkRowsAffected(ctx, result, id)
 }
 
-// UpdateStatus はステータスを更新する
-// sinceAt が非ゼロの場合、updated_at が一致しなければ ErrRaceCondition を返す
+// UpdateStatus changes the status of a ticket.
+// If sinceAt is non-zero, it returns ErrRaceCondition when updated_at does not match.
 func (s *TicketStore) UpdateStatus(ctx context.Context, id int64, status model.Status, sinceAt time.Time) (*model.Ticket, error) {
 	now := time.Now().UTC()
 	nowStr := now.Format(time.RFC3339Nano)
@@ -122,31 +122,31 @@ func (s *TicketStore) UpdateStatus(ctx context.Context, id int64, status model.S
 	return s.checkRowsAffected(ctx, result, id)
 }
 
-// checkRowsAffected はUPDATEの結果を確認し、適切なエラーまたは更新後チケットを返す
+// checkRowsAffected inspects the result of an UPDATE and returns ErrRaceCondition or ErrNotFound when no rows were affected.
 func (s *TicketStore) checkRowsAffected(ctx context.Context, result sql.Result, id int64) (*model.Ticket, error) {
 	n, err := result.RowsAffected()
 	if err != nil {
 		return nil, fmt.Errorf("rows affected: %w", err)
 	}
 	if n == 0 {
-		// 存在確認
+		// verify whether the ticket exists at all
 		_, err := s.GetByID(ctx, id)
 		if err != nil {
-			return nil, err // ErrNotFound
+			return nil, err // propagate ErrNotFound
 		}
 		return nil, model.ErrRaceCondition
 	}
 	return s.GetByID(ctx, id)
 }
 
-// ListOptions はチケット一覧のフィルタ・ソートオプション
+// ListOptions holds filter and sort parameters for listing tickets.
 type ListOptions struct {
 	StatusFilter model.Status
-	SortBy       string // "id" | "updated_at" | "status"
+	SortBy       string // "id", "updated_at", or "status"
 	Ascending    bool
 }
 
-// List はフィルタ・ソート条件で一覧を返す
+// List returns tickets matching the given filter and sort options.
 func (s *TicketStore) List(ctx context.Context, opts ListOptions) ([]model.ListItem, error) {
 	query := `
 		SELECT t.id, t.title, t.status, COUNT(c.id) as comment_count, t.updated_at
@@ -160,7 +160,7 @@ func (s *TicketStore) List(ctx context.Context, opts ListOptions) ([]model.ListI
 	}
 	query += " GROUP BY t.id"
 
-	// ソート
+	// build ORDER BY clause
 	sortCol := "t.id"
 	switch opts.SortBy {
 	case "updated_at":

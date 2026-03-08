@@ -6,18 +6,18 @@ import (
 	"os"
 )
 
-// WriteJSON は v を JSON として stdout に書き出す（改行付き）
+// WriteJSON encodes v as JSON and writes it to stdout.
 func WriteJSON(v any) error {
 	enc := json.NewEncoder(os.Stdout)
 	return enc.Encode(v)
 }
 
-// errorResponse はエラーレスポンスのJSON形式
+// errorResponse is the JSON shape returned on error.
 type errorResponse struct {
 	Error string `json:"error"`
 }
 
-// WriteError はエラーを JSON として stdout に書き出し、人間向けメッセージを stderr に書く
+// WriteError writes the error as a JSON object to stdout and logs it to stderr.
 func WriteError(err error) {
 	slog.Error("command error", "err", err)
 	resp := errorResponse{Error: err.Error()}

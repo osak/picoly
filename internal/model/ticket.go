@@ -2,7 +2,7 @@ package model
 
 import "time"
 
-// Status はチケットのステータスを表す
+// Status represents the status of a ticket.
 type Status string
 
 const (
@@ -12,7 +12,7 @@ const (
 	StatusCancelled  Status = "cancelled"
 )
 
-// Valid はステータスが有効な値かどうかを返す
+// Valid reports whether the status is a valid value.
 func (s Status) Valid() bool {
 	switch s {
 	case StatusTodo, StatusInProgress, StatusDone, StatusCancelled:
@@ -21,7 +21,7 @@ func (s Status) Valid() bool {
 	return false
 }
 
-// Ticket はチケットを表す
+// Ticket represents a task in the Kanban board.
 type Ticket struct {
 	ID          int64     `json:"id"`
 	Title       string    `json:"title"`
@@ -33,7 +33,7 @@ type Ticket struct {
 	Comments    []Comment `json:"comments,omitempty"`
 }
 
-// Comment はチケットに付くコメントを表す
+// Comment represents a progress note on a ticket.
 type Comment struct {
 	ID        int64     `json:"id"`
 	TicketID  int64     `json:"ticket_id"`
@@ -42,7 +42,7 @@ type Comment struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// ListItem はチケット一覧用の軽量表現
+// ListItem is a lightweight representation of a ticket for list views.
 type ListItem struct {
 	ID           int64     `json:"id"`
 	Title        string    `json:"title"`

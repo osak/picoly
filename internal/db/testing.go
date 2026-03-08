@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// NewTestDB はテスト用の一時DBを作成する
+// NewTestDB creates a temporary in-memory database for use in tests.
 func NewTestDB(t *testing.T) *DB {
 	t.Helper()
 	dir := t.TempDir()

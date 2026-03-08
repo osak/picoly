@@ -1,6 +1,6 @@
 package model
 
-// Role はユーザーのロールを表す
+// Role represents the permission level of a user.
 type Role string
 
 const (
@@ -9,7 +9,7 @@ const (
 	RoleWorker Role = "worker"
 )
 
-// Valid はロールが有効な値かどうかを返す
+// Valid reports whether the role is a valid value.
 func (r Role) Valid() bool {
 	switch r {
 	case RoleGod, RoleAdmin, RoleWorker:
@@ -18,7 +18,7 @@ func (r Role) Valid() bool {
 	return false
 }
 
-// User はユーザーを表す
+// User represents a Picoly user with an assigned role.
 type User struct {
 	ID   string `json:"id"`
 	Role Role   `json:"role"`

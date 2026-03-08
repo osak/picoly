@@ -19,7 +19,7 @@ type editInput struct {
 }
 
 func runEdit(args []string) error {
-	// IDは最初の位置引数として取り出し、残りをflagでパースする
+	// The ticket ID is the first positional argument; remaining args are flags.
 	if len(args) < 1 {
 		WriteError(fmt.Errorf("usage: picoly edit <id> [options]"))
 		return fmt.Errorf("ticket ID required")

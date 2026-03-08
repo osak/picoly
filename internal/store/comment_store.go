@@ -9,17 +9,17 @@ import (
 	"github.com/osak/picoly/internal/model"
 )
 
-// CommentStore はコメントのCRUDを行う
+// CommentStore handles CRUD operations for comments.
 type CommentStore struct {
 	db *db.DB
 }
 
-// NewCommentStore はCommentStoreを作成する
+// NewCommentStore creates a new CommentStore.
 func NewCommentStore(d *db.DB) *CommentStore {
 	return &CommentStore{db: d}
 }
 
-// Add はチケットにコメントを追加する
+// Add appends a comment to a ticket.
 func (s *CommentStore) Add(ctx context.Context, ticketID int64, body, author string) (*model.Comment, error) {
 	now := time.Now().UTC()
 	nowStr := now.Format(time.RFC3339Nano)
@@ -43,7 +43,7 @@ func (s *CommentStore) Add(ctx context.Context, ticketID int64, body, author str
 	}, nil
 }
 
-// ListByTicketID はチケットのコメントを時系列昇順で返す
+// ListByTicketID returns all comments for a ticket in ascending chronological order.
 func (s *CommentStore) ListByTicketID(ctx context.Context, ticketID int64) ([]model.Comment, error) {
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT id, ticket_id, body, author, created_at FROM comments WHERE ticket_id = ? ORDER BY created_at ASC`,
