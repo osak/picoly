@@ -19,6 +19,10 @@ test-verbose:
 lint:
     GOEXPERIMENT={{goexperiment}} go vet ./...
 
+# E2Eインテグレーションテスト（ビルド後に実行）
+e2e: build
+    GOEXPERIMENT={{goexperiment}} go run ./cmd/integration-test
+
 # クリーン
 clean:
     rm -f bin/picoly

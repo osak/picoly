@@ -41,11 +41,31 @@ The first user to run any `picoly` command against a new database is automatical
 | `admin` | ✓ | ✓ |
 | `worker` | ✗ | ✓ |
 
-## Running tests
+## Testing
+
+### Unit tests
+
+Standard Go unit tests covering individual packages (model, db, store, auth, export, lock):
 
 ```sh
 bin/just test
 ```
+
+### Integration tests
+
+End-to-end tests that exercise the `picoly` binary as a black box. Because they require a pre-built binary, they live in `cmd/integration-test/` as a standalone Go program rather than in a `_test.go` file.
+
+```sh
+bin/just e2e        # builds bin/picoly first, then runs all integration tests
+```
+
+To run the integration tests against an already-built binary:
+
+```sh
+GOEXPERIMENT=jsonv2 go run ./cmd/integration-test [path/to/picoly]
+```
+
+Each test case gets its own isolated temporary directory (DB + export dir) so tests do not interfere with each other. Database assertions read directly from SQLite using the internal `db` package instead of shelling out to an external tool.
 
 ## Commands
 
