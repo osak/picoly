@@ -252,22 +252,25 @@ These files are intended for humans to review progress at a glance.
 
 ## Claude Code integration
 
-A Claude Code skill is provided at `~/.claude/skills/picoly/` for using Picoly inside Claude Code sessions.
+### Global CLAUDE.md setup
 
-When `picoly.db` exists in the project directory, the orchestrator (commander) agent:
+To make every Claude Code agent (including subagents) automatically aware of Picoly, append `etc/CLAUDE.md` from this repository to your global `~/.claude/CLAUDE.md`:
 
-1. Creates a ticket with `picoly add` before delegating work to a subagent
-2. Passes the ticket ID to the subagent in its instructions
-3. Reads the ticket with `picoly read` after the subagent reports back
+```sh
+cat etc/CLAUDE.md >> ~/.claude/CLAUDE.md
+```
 
-Subagents follow this protocol:
+This adds a short protocol that activates only when `picoly.db` is present in the working directory, so it has no effect on projects that do not use Picoly.
 
-1. `picoly read <id>` — read the full task description from the ticket
-2. `picoly work <id> --status in_progress --since <ts>` — mark as started
-3. `picoly work <id> --comment "..." --since <ts>` — report progress periodically
-4. `picoly work <id> --status done --comment "..." --since <ts>` — mark complete (or `cancelled` on failure)
+### Skill
 
-Install the skill by running `picoly` from this project at least once (to build `bin/picoly`) and ensuring `bin/picoly` is on your `PATH`.
+A more detailed Claude Code skill is provided in `skill/SKILL.md`. Install it by copying the directory to `~/.claude/skills/`:
+
+```sh
+cp -r skill ~/.claude/skills/picoly
+```
+
+The skill covers the full orchestrator/subagent protocol and command reference. It is referenced from `etc/CLAUDE.md` but can also be invoked manually with `/picoly`.
 
 ## Concurrency
 
