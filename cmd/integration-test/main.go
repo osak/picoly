@@ -46,6 +46,11 @@ func main() {
 		{"NonGodRequiresSince", testNonGodRequiresSince},
 		{"FirstUserBecomesGod", testFirstUserBecomesGod},
 		{"MarkdownExport", testMarkdownExport},
+		{"ProblemStatus", testProblemStatus},
+		{"AssigneeAutoSet", testAssigneeAutoSet},
+		{"AssigneeExplicit", testAssigneeExplicit},
+		{"InProgressStatusChangeRestriction", testInProgressStatusChangeRestriction},
+		{"AssigneeCanChangeStatus", testAssigneeCanChangeStatus},
 	}
 
 	failed := 0
@@ -363,4 +368,88 @@ func testMarkdownExport(e *testEnv) error {
 	}
 	return check(strings.Contains(string(content), "Export test"),
 		"board.md does not contain ticket title")
+}
+
+// getUpdatedAt reads a ticket and returns its updated_at timestamp string.
+func getUpdatedAt(e *testEnv, id int64) string {
+	out := e.mustRun("read", fmt.Sprintf("%d", id))
+	ticket, err := parseTicket(out)
+	if err != nil {
+		fatalf("getUpdatedAt: %v", err)
+	}
+	return ticket.UpdatedAt.UTC().Format(time.RFC3339Nano)
+}
+
+// testProblemStatus verifies that a ticket can be set to the problem status.
+func testProblemStatus(e *testEnv) error {
+	e.mustRun("add", "--title", "T1")
+	e.mustRun("work", "1", "--status", "problem") // alice is god; --since not required
+
+	out := e.mustRun("read", "1")
+	ticket, err := parseTicket(out)
+	if err != nil {
+		return err
+	}
+	return check(ticket.Status == model.StatusProblem,
+		"Status = %q, want %q", ticket.Status, model.StatusProblem)
+}
+
+// testAssigneeAutoSet verifies that the assignee is set to the acting user when transitioning to in_progress.
+func testAssigneeAutoSet(e *testEnv) error {
+	e.mustRun("add", "--title", "T1")
+	e.mustRun("work", "1", "--status", "in_progress")
+
+	out := e.mustRun("read", "1")
+	ticket, err := parseTicket(out)
+	if err != nil {
+		return err
+	}
+	return check(ticket.Assignee == "alice",
+		"Assignee = %q, want %q", ticket.Assignee, "alice")
+}
+
+// testAssigneeExplicit verifies that --assignee can be set explicitly on add.
+func testAssigneeExplicit(e *testEnv) error {
+	e.mustRun("add", "--title", "T1", "--assignee", "carol")
+
+	out := e.mustRun("read", "1")
+	ticket, err := parseTicket(out)
+	if err != nil {
+		return err
+	}
+	return check(ticket.Assignee == "carol",
+		"Assignee = %q, want %q", ticket.Assignee, "carol")
+}
+
+// testInProgressStatusChangeRestriction verifies that a non-assignee worker cannot change the status of an in_progress ticket.
+func testInProgressStatusChangeRestriction(e *testEnv) error {
+	e.mustRun("add", "--title", "T1")
+	e.mustRun("work", "1", "--status", "in_progress") // alice becomes assignee
+
+	bob := e.withUser("bob")
+	bob.mustRun("list") // register bob as worker
+
+	out, code := bob.run("work", "1", "--status", "done", "--since", getUpdatedAt(e, 1))
+	if err := check(code != 0, "expected non-assignee worker to be blocked, got exit 0"); err != nil {
+		return err
+	}
+	return check(strings.Contains(out, "unauthorized"),
+		"expected unauthorized error, got: %s", out)
+}
+
+// testAssigneeCanChangeStatus verifies that the assignee can change the status of an in_progress ticket.
+func testAssigneeCanChangeStatus(e *testEnv) error {
+	// alice (god) creates the DB and a ticket first
+	e.mustRun("add", "--title", "T1")
+
+	envBob := e.withUser("bob")
+	envBob.mustRun("list") // register bob as worker
+
+	e.mustRun("work", "1", "--status", "in_progress", "--assignee", "bob")
+
+	ts := getUpdatedAt(e, 1)
+
+	// bob (worker, but assignee) should be able to change status
+	_, code := envBob.run("work", "1", "--status", "done", "--since", ts)
+	return check(code == 0, "expected assignee to change status, got exit %d", code)
 }

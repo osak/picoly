@@ -11,6 +11,7 @@ func TestStatusValid(t *testing.T) {
 		{StatusInProgress, true},
 		{StatusDone, true},
 		{StatusCancelled, true},
+		{StatusProblem, true},
 		{Status("invalid"), false},
 		{Status(""), false},
 	}

@@ -22,7 +22,7 @@ func TestTicketCreate(t *testing.T) {
 	ts, _, _ := newTestStores(t)
 	ctx := context.Background()
 
-	ticket, err := ts.Create(ctx, "Test Ticket", "Description", "alice")
+	ticket, err := ts.Create(ctx, "Test Ticket", "Description", "alice", "")
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -51,14 +51,14 @@ func TestTicketUpdateStatus_RaceCondition(t *testing.T) {
 	ts, _, _ := newTestStores(t)
 	ctx := context.Background()
 
-	ticket, err := ts.Create(ctx, "T1", "", "alice")
+	ticket, err := ts.Create(ctx, "T1", "", "alice", "")
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 
 	// 古いタイムスタンプで更新しようとするとレースコンディションエラー
 	oldTime := ticket.UpdatedAt.Add(-1 * time.Second)
-	_, err = ts.UpdateStatus(ctx, ticket.ID, model.StatusInProgress, oldTime)
+	_, err = ts.UpdateStatus(ctx, ticket.ID, model.StatusInProgress, "", oldTime)
 	if !errors.Is(err, model.ErrRaceCondition) {
 		t.Errorf("UpdateStatus with old since = %v, want ErrRaceCondition", err)
 	}
@@ -68,9 +68,9 @@ func TestTicketList(t *testing.T) {
 	ts, _, _ := newTestStores(t)
 	ctx := context.Background()
 
-	ts.Create(ctx, "T1", "", "alice")
-	ts.Create(ctx, "T2", "", "alice")
-	ts.UpdateStatus(ctx, 1, model.StatusInProgress, time.Time{})
+	ts.Create(ctx, "T1", "", "alice", "")
+	ts.Create(ctx, "T2", "", "alice", "")
+	ts.UpdateStatus(ctx, 1, model.StatusInProgress, "", time.Time{})
 
 	items, err := ts.List(ctx, ListOptions{StatusFilter: model.StatusInProgress})
 	if err != nil {
@@ -87,7 +87,7 @@ func TestCommentAdd(t *testing.T) {
 	ts, cs, _ := newTestStores(t)
 	ctx := context.Background()
 
-	ticket, _ := ts.Create(ctx, "T1", "", "alice")
+	ticket, _ := ts.Create(ctx, "T1", "", "alice", "")
 	comment, err := cs.Add(ctx, ticket.ID, "Hello", "bob")
 	if err != nil {
 		t.Fatalf("Add: %v", err)
@@ -101,7 +101,7 @@ func TestCommentListOrder(t *testing.T) {
 	ts, cs, _ := newTestStores(t)
 	ctx := context.Background()
 
-	ticket, _ := ts.Create(ctx, "T1", "", "alice")
+	ticket, _ := ts.Create(ctx, "T1", "", "alice", "")
 	cs.Add(ctx, ticket.ID, "first", "alice")
 	time.Sleep(time.Millisecond)
 	cs.Add(ctx, ticket.ID, "second", "alice")
@@ -157,5 +157,46 @@ func TestUserEnsureGodUser(t *testing.T) {
 	// GetOrCreateはSELECTを先に試みるので、既存ユーザーはそのまま返す
 	if u.Role != model.RoleGod {
 		t.Errorf("Role = %q, want %q", u.Role, model.RoleGod)
+	}
+}
+
+func TestTicketCreateWithAssignee(t *testing.T) {
+	ts, _, _ := newTestStores(t)
+	ctx := context.Background()
+
+	ticket, err := ts.Create(ctx, "T1", "", "alice", "bob")
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if ticket.Assignee != "bob" {
+		t.Errorf("Assignee = %q, want %q", ticket.Assignee, "bob")
+	}
+}
+
+func TestUpdateStatusSetsAssignee(t *testing.T) {
+	ts, _, _ := newTestStores(t)
+	ctx := context.Background()
+
+	ticket, _ := ts.Create(ctx, "T1", "", "alice", "")
+	updated, err := ts.UpdateStatus(ctx, ticket.ID, model.StatusInProgress, "carol", time.Time{})
+	if err != nil {
+		t.Fatalf("UpdateStatus: %v", err)
+	}
+	if updated.Assignee != "carol" {
+		t.Errorf("Assignee = %q, want %q", updated.Assignee, "carol")
+	}
+}
+
+func TestUpdateStatusPreservesAssigneeWhenEmpty(t *testing.T) {
+	ts, _, _ := newTestStores(t)
+	ctx := context.Background()
+
+	ticket, _ := ts.Create(ctx, "T1", "", "alice", "bob")
+	updated, err := ts.UpdateStatus(ctx, ticket.ID, model.StatusInProgress, "", time.Time{})
+	if err != nil {
+		t.Fatalf("UpdateStatus: %v", err)
+	}
+	if updated.Assignee != "bob" {
+		t.Errorf("Assignee = %q, want %q (should be preserved)", updated.Assignee, "bob")
 	}
 }

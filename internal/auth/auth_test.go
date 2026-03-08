@@ -32,3 +32,29 @@ func TestCanWork(t *testing.T) {
 		}
 	}
 }
+
+func TestCanChangeStatusOfInProgress(t *testing.T) {
+	inProgressTicket := &model.Ticket{Status: model.StatusInProgress, Assignee: "alice"}
+	todoTicket       := &model.Ticket{Status: model.StatusTodo, Assignee: "alice"}
+
+	tests := []struct {
+		name   string
+		actor  *model.User
+		ticket *model.Ticket
+		can    bool
+	}{
+		{"todo ticket allows anyone",      &model.User{ID: "bob",   Role: model.RoleWorker}, todoTicket,       true},
+		{"god can always change",          &model.User{ID: "god",   Role: model.RoleGod},   inProgressTicket, true},
+		{"admin can always change",        &model.User{ID: "admin", Role: model.RoleAdmin},  inProgressTicket, true},
+		{"assignee can change",            &model.User{ID: "alice", Role: model.RoleWorker}, inProgressTicket, true},
+		{"non-assignee worker blocked",    &model.User{ID: "bob",   Role: model.RoleWorker}, inProgressTicket, false},
+		{"worker blocked if no assignee",  &model.User{ID: "bob",   Role: model.RoleWorker}, &model.Ticket{Status: model.StatusInProgress, Assignee: ""}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := CanChangeStatusOfInProgress(tt.actor, tt.ticket); got != tt.can {
+				t.Errorf("CanChangeStatusOfInProgress() = %v, want %v", got, tt.can)
+			}
+		})
+	}
+}
