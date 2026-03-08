@@ -1,6 +1,9 @@
 bin/picoly
+/picoly
 *.db
 *.db-wal
 *.db-shm
 *.lock
 /picoly/
+.idea/
+*.swp
