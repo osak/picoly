@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS tickets (
     title       TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
     status      TEXT NOT NULL DEFAULT 'todo',
+    assignee    TEXT NOT NULL DEFAULT '',
     created_by  TEXT NOT NULL,
     created_at  TEXT NOT NULL,
     updated_at  TEXT NOT NULL

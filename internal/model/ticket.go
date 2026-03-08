@@ -10,12 +10,13 @@ const (
 	StatusInProgress Status = "in_progress"
 	StatusDone       Status = "done"
 	StatusCancelled  Status = "cancelled"
+	StatusProblem    Status = "problem"
 )
 
 // Valid reports whether the status is a valid value.
 func (s Status) Valid() bool {
 	switch s {
-	case StatusTodo, StatusInProgress, StatusDone, StatusCancelled:
+	case StatusTodo, StatusInProgress, StatusDone, StatusCancelled, StatusProblem:
 		return true
 	}
 	return false
@@ -27,6 +28,7 @@ type Ticket struct {
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
 	Status      Status    `json:"status"`
+	Assignee    string    `json:"assignee,omitempty"`
 	CreatedBy   string    `json:"created_by"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
@@ -47,6 +49,7 @@ type ListItem struct {
 	ID           int64     `json:"id"`
 	Title        string    `json:"title"`
 	Status       Status    `json:"status"`
+	Assignee     string    `json:"assignee,omitempty"`
 	CommentCount int       `json:"comment_count"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }
