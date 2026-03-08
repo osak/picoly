@@ -1,0 +1,19 @@
+# [#{{.ID}}] {{.Title}}
+
+**Status:** {{.Status}}
+**Created by:** {{.CreatedBy}}
+**Created at:** {{formatTime .CreatedAt}}
+**Updated at:** {{formatTime .UpdatedAt}}
+
+## Description
+
+{{.Description}}
+
+## Comments ({{len .Comments}})
+
+{{range .Comments -}}
+### {{.Author}} @ {{formatTime .CreatedAt}}
+
+{{.Body}}
+
+{{end}}

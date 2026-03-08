@@ -1,0 +1,11 @@
+# Picoly Board
+
+_Last updated: {{formatTime .UpdatedAt}}_
+
+## Tickets
+
+| ID | Title | Status | Comments | Updated |
+|----|-------|--------|----------|---------|
+{{range .Tickets -}}
+| {{.ID}} | {{.Title}} | {{.Status}} | {{.CommentCount}} | {{formatDate .UpdatedAt}} |
+{{end}}
