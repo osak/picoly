@@ -1,9 +1,15 @@
 package cmd
 
 import (
-	"errors"
+	"context"
 	"fmt"
 	"os"
+
+	"github.com/osak/picoly/internal/auth"
+	"github.com/osak/picoly/internal/db"
+	"github.com/osak/picoly/internal/export"
+	"github.com/osak/picoly/internal/model"
+	"github.com/osak/picoly/internal/store"
 )
 
 // Config はpicolyの設定を保持する
@@ -13,11 +19,22 @@ type Config struct {
 	UserID    string
 }
 
+// AppContext はコマンド実行に必要なコンテキストを保持する
+type AppContext struct {
+	Config   *Config
+	DB       *db.DB
+	Tickets  *store.TicketStore
+	Comments *store.CommentStore
+	Users    *store.UserStore
+	Exporter *export.Exporter
+	User     *model.User
+}
+
 // LoadConfig は環境変数から設定を読み込む
 func LoadConfig() (*Config, error) {
 	userID := os.Getenv("PICOLY_USER_ID")
 	if userID == "" {
-		return nil, errors.New("PICOLY_USER_ID environment variable is not set")
+		return nil, model.ErrMissingUserID
 	}
 	dbPath := os.Getenv("PICOLY_DB")
 	if dbPath == "" {
@@ -31,6 +48,43 @@ func LoadConfig() (*Config, error) {
 		DBPath:    dbPath,
 		ExportDir: exportDir,
 		UserID:    userID,
+	}, nil
+}
+
+// NewAppContext は設定からAppContextを構築する
+func NewAppContext(cfg *Config) (*AppContext, error) {
+	d, err := db.Open(cfg.DBPath)
+	if err != nil {
+		return nil, fmt.Errorf("open db: %w", err)
+	}
+
+	us := store.NewUserStore(d)
+	// 初回起動時にGodユーザーを登録
+	if err := us.EnsureGodUser(context.Background(), cfg.UserID); err != nil {
+		d.Close()
+		return nil, fmt.Errorf("ensure god user: %w", err)
+	}
+
+	user, err := us.GetOrCreate(context.Background(), cfg.UserID)
+	if err != nil {
+		d.Close()
+		return nil, fmt.Errorf("get user: %w", err)
+	}
+
+	exp, err := export.NewExporter(cfg.ExportDir)
+	if err != nil {
+		d.Close()
+		return nil, fmt.Errorf("new exporter: %w", err)
+	}
+
+	return &AppContext{
+		Config:   cfg,
+		DB:       d,
+		Tickets:  store.NewTicketStore(d),
+		Comments: store.NewCommentStore(d),
+		Users:    us,
+		Exporter: exp,
+		User:     user,
 	}, nil
 }
 
@@ -67,4 +121,12 @@ Commands:
   read    Read a ticket
   list    List tickets`)
 	return fmt.Errorf("no command specified")
+}
+
+// requireAdmin はユーザーが管理者権限を持つことを確認する
+func requireAdmin(user *model.User) error {
+	if !auth.CanManageTickets(user) {
+		return model.ErrUnauthorized
+	}
+	return nil
 }
