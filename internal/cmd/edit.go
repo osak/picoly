@@ -52,7 +52,7 @@ func runEdit(args []string) error {
 
 	var sinceAt time.Time
 	if *sinceStr != "" {
-		sinceAt, err = time.Parse(time.RFC3339, *sinceStr)
+		sinceAt, err = parseSince(*sinceStr)
 		if err != nil {
 			WriteError(fmt.Errorf("parse --since: %w", err))
 			return err
