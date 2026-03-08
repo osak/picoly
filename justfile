@@ -23,6 +23,10 @@ lint:
 e2e: build
     GOEXPERIMENT={{goexperiment}} go run ./cmd/integration-test
 
+# $GOPATH/bin にインストール
+install:
+    GOEXPERIMENT={{goexperiment}} go install ./cmd/picoly
+
 # クリーン
 clean:
     rm -f bin/picoly
