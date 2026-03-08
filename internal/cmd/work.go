@@ -70,6 +70,12 @@ func runWork(args []string) error {
 	}
 	defer app.DB.Close()
 
+	if *sinceStr == "" && app.User.Role != model.RoleGod {
+		err := fmt.Errorf("--since is required for non-god users to prevent race conditions")
+		WriteError(err)
+		return err
+	}
+
 	l, err := lock.Acquire(cfg.DBPath, 30*time.Second)
 	if err != nil {
 		WriteError(err)

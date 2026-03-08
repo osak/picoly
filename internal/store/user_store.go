@@ -45,11 +45,12 @@ func (s *UserStore) GetOrCreate(ctx context.Context, userID string) (*model.User
 	return &model.User{ID: userID, Role: model.RoleWorker}, nil
 }
 
-// EnsureGodUser inserts the given user with the god role only if the user does not already exist.
+// EnsureGodUser inserts the given user with the god role only if the users table is empty.
+// This ensures that only the very first user to access a new database receives the god role.
 func (s *UserStore) EnsureGodUser(ctx context.Context, userID string) error {
 	_, err := s.db.ExecContext(ctx,
-		`INSERT OR IGNORE INTO users (id, role) VALUES (?, ?)`,
-		userID, string(model.RoleGod),
+		`INSERT INTO users (id, role) SELECT ?, 'god' WHERE NOT EXISTS (SELECT 1 FROM users)`,
+		userID,
 	)
 	if err != nil {
 		return fmt.Errorf("ensure god user: %w", err)

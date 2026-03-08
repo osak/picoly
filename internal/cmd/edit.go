@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/osak/picoly/internal/lock"
+	"github.com/osak/picoly/internal/model"
 	"github.com/osak/picoly/internal/store"
 )
 
@@ -71,6 +72,12 @@ func runEdit(args []string) error {
 	defer app.DB.Close()
 
 	if err := requireAdmin(app.User); err != nil {
+		WriteError(err)
+		return err
+	}
+
+	if *sinceStr == "" && app.User.Role != model.RoleGod {
+		err := fmt.Errorf("--since is required for non-god users to prevent race conditions")
 		WriteError(err)
 		return err
 	}
