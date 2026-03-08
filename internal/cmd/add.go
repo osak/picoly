@@ -15,6 +15,7 @@ import (
 type addInput struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
+	Assignee    string `json:"assignee"`
 }
 
 func runAdd(args []string) error {
@@ -23,6 +24,7 @@ func runAdd(args []string) error {
 	title := fs.String("title", "", "Ticket title (required)")
 	desc := fs.String("desc", "", "Ticket description")
 	jsonStr := fs.String("json", "", "JSON input (overrides --title and --desc)")
+	assignee := fs.String("assignee", "", "Assignee user ID")
 
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -34,6 +36,9 @@ func runAdd(args []string) error {
 		if err := json.Unmarshal([]byte(*jsonStr), &input); err != nil {
 			return fmt.Errorf("parse --json: %w", err)
 		}
+	}
+	if *assignee != "" {
+		input.Assignee = *assignee
 	}
 	if input.Title == "" {
 		WriteError(fmt.Errorf("--title is required"))
@@ -65,7 +70,7 @@ func runAdd(args []string) error {
 	defer l.Release()
 
 	ctx := context.Background()
-	ticket, err := app.Tickets.Create(ctx, input.Title, input.Description, cfg.UserID, "")
+	ticket, err := app.Tickets.Create(ctx, input.Title, input.Description, cfg.UserID, input.Assignee)
 	if err != nil {
 		WriteError(err)
 		return err

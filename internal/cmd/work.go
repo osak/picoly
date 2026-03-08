@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/osak/picoly/internal/auth"
 	"github.com/osak/picoly/internal/lock"
 	"github.com/osak/picoly/internal/model"
 	"github.com/osak/picoly/internal/store"
@@ -27,7 +28,8 @@ func runWork(args []string) error {
 
 	fs := flag.NewFlagSet("work", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
-	statusStr := fs.String("status", "", "New status (todo|in_progress|done|cancelled)")
+	statusStr := fs.String("status", "", "New status (todo|in_progress|done|cancelled|problem)")
+	assigneeFlag := fs.String("assignee", "", "Explicitly set the assignee")
 	comment := fs.String("comment", "", "Comment to add")
 	sinceStr := fs.String("since", "", "Expected updated_at (RFC3339) for optimistic locking")
 
@@ -85,8 +87,26 @@ func runWork(args []string) error {
 
 	ctx := context.Background()
 
+	// Permission check for in_progress tickets
 	if status != "" {
-		if _, err := app.Tickets.UpdateStatus(ctx, id, status, "", sinceAt); err != nil {
+		current, err := app.Tickets.GetByID(ctx, id)
+		if err != nil {
+			WriteError(err)
+			return err
+		}
+		if !auth.CanChangeStatusOfInProgress(app.User, current) {
+			WriteError(model.ErrUnauthorized)
+			return model.ErrUnauthorized
+		}
+	}
+
+	effectiveAssignee := *assigneeFlag
+	if status == model.StatusInProgress && effectiveAssignee == "" {
+		effectiveAssignee = cfg.UserID
+	}
+
+	if status != "" {
+		if _, err := app.Tickets.UpdateStatus(ctx, id, status, effectiveAssignee, sinceAt); err != nil {
 			WriteError(err)
 			return err
 		}

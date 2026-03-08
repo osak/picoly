@@ -18,7 +18,7 @@ type listResponse struct {
 func runList(args []string) error {
 	fs := flag.NewFlagSet("list", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
-	statusStr := fs.String("status", "", "Filter by status (todo|in_progress|done|cancelled)")
+	statusStr := fs.String("status", "", "Filter by status (todo|in_progress|done|cancelled|problem)")
 	sortBy := fs.String("sort", "", "Sort by field (id|updated_at|status)")
 	asc := fs.Bool("asc", false, "Sort ascending")
 
