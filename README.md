@@ -250,6 +250,25 @@ After every write operation (`add`, `edit`, `work`), Picoly regenerates two Mark
 
 These files are intended for humans to review progress at a glance.
 
+## Claude Code integration
+
+A Claude Code skill is provided at `~/.claude/skills/picoly/` for using Picoly inside Claude Code sessions.
+
+When `picoly.db` exists in the project directory, the orchestrator (commander) agent:
+
+1. Creates a ticket with `picoly add` before delegating work to a subagent
+2. Passes the ticket ID to the subagent in its instructions
+3. Reads the ticket with `picoly read` after the subagent reports back
+
+Subagents follow this protocol:
+
+1. `picoly read <id>` — read the full task description from the ticket
+2. `picoly work <id> --status in_progress --since <ts>` — mark as started
+3. `picoly work <id> --comment "..." --since <ts>` — report progress periodically
+4. `picoly work <id> --status done --comment "..." --since <ts>` — mark complete (or `cancelled` on failure)
+
+Install the skill by running `picoly` from this project at least once (to build `bin/picoly`) and ensuring `bin/picoly` is on your `PATH`.
+
 ## Concurrency
 
 Write commands (`add`, `edit`, `work`) acquire an exclusive file lock on `<PICOLY_DB>.lock` before touching the database, so concurrent agents serialize automatically.
