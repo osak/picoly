@@ -49,7 +49,8 @@ ls picoly.db 2>/dev/null && echo "picoly available"
 
    チケットのステータスとコメントを見て、次のアクションを決定します。
    - `done`: 成功。次のタスクへ
-   - `cancelled`: 失敗。コメントを読んでリカバリーを検討
+   - `cancelled`: 失敗（続行不可）。コメントを読んでリカバリーを検討
+   - `problem`: 問題発生（作業は継続可能）。コメントを読んで対応を判断
 
 ## Subagentの行動規範
 
@@ -85,6 +86,12 @@ picoly work <id> --comment "○○まで完了。次は△△に取り組みま�
 
 ```bash
 picoly work <id> --status done --comment "完了。<結果の要約>" --since "<updated_at>"
+```
+
+問題が発生したが作業を継続できる場合:
+
+```bash
+picoly work <id> --status problem --comment "問題: <詳細>。対処中: <内容>" --since "<updated_at>"
 ```
 
 問題が発生して続行不可能な場合:
@@ -131,6 +138,7 @@ Subagentを起動するときは `PICOLY_USER_ID` にそのSubagentのエージ�
 ```bash
 # チケット追加（管理者以上）
 picoly add --title "タイトル" --desc "説明"
+picoly add --title "タイトル" --desc "説明" --assignee <user_id>
 picoly add --json '{"title":"...","description":"..."}'
 
 # チケット編集（管理者以上）
@@ -138,7 +146,9 @@ picoly edit <id> --title "新タイトル" --since "<updated_at>"
 
 # ステータス変更・コメント追加（全ロール、god以外は--since必須）
 picoly work <id> --status <status> --comment "コメント" --since "<updated_at>"
-# status: todo | in_progress | done | cancelled
+picoly work <id> --assignee <user_id> --since "<updated_at>"
+# status: todo | in_progress | done | cancelled | problem
+# in_progressチケットのステータス変更はassignee本人 / god / adminのみ可能
 
 # チケット詳細取得
 picoly read <id>

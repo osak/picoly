@@ -4,8 +4,8 @@ _Last updated: {{formatTime .UpdatedAt}}_
 
 ## Tickets
 
-| ID | Title | Status | Comments | Updated |
-|----|-------|--------|----------|---------|
+| ID | Title | Status | Assignee | Comments | Updated |
+|----|-------|--------|----------|----------|---------|
 {{range .Tickets -}}
-| {{.ID}} | {{.Title}} | {{.Status}} | {{.CommentCount}} | {{formatDate .UpdatedAt}} |
+| {{.ID}} | {{.Title}} | {{.Status}} | {{.Assignee}} | {{.CommentCount}} | {{formatDate .UpdatedAt}} |
 {{end}}

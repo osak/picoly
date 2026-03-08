@@ -18,7 +18,8 @@ All agents (orchestrator and subagents alike) must follow this protocol.
    picoly read <id>
    ```
    - Status `done` → proceed to the next task
-   - Status `cancelled` → read the comments and decide on recovery
+   - Status `cancelled` → read the comments and decide on recovery (task cannot continue)
+   - Status `problem` → read the comments and decide on response (task encountered an issue but may continue)
 
 ### Subagent: when given a ticket ID
 
@@ -30,6 +31,7 @@ All agents (orchestrator and subagents alike) must follow this protocol.
    ```bash
    picoly work <id> --status in_progress --since "<updated_at>"
    ```
+   Note: once a ticket is `in_progress`, only the assignee, god, or admin may change its status.
 3. Report progress periodically via comments:
    ```bash
    picoly work <id> --comment "Done X, moving on to Y" --since "<updated_at>"
@@ -38,7 +40,9 @@ All agents (orchestrator and subagents alike) must follow this protocol.
    ```bash
    # success
    picoly work <id> --status done --comment "Completed. <summary>" --since "<updated_at>"
-   # failure
+   # problem encountered but work can continue
+   picoly work <id> --status problem --comment "Problem: <detail>. Ongoing: <what is being tried>" --since "<updated_at>"
+   # failure — cannot continue
    picoly work <id> --status cancelled --comment "Problem: <detail>. Attempted: <what was tried>" --since "<updated_at>"
    ```
 
