@@ -3,4 +3,4 @@ bin/picoly
 *.db-wal
 *.db-shm
 *.lock
-picoly/
+/picoly/
